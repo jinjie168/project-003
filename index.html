@@ -83,6 +83,17 @@ svg.ic{width:1em;height:1em;fill:currentColor;flex:none;display:block;filter:dro
 .set-st{font-family:'Lilita One';font-size:calc(var(--u)*20);color:#9dffb0;min-width:calc(var(--u)*46);text-align:right}
 .set-st.off{color:#ff9a9a}
 .ic.coin{display:inline-block;width:1.2em;height:1.2em;vertical-align:-.2em;background:var(--coin) center/contain no-repeat;filter:drop-shadow(0 1px 0 rgba(0,0,0,.35))}
+#revive,#adscreen{background:rgba(6,4,30,.6)}
+.rv-card{display:flex;flex-direction:column;gap:calc(var(--u)*14);padding:calc(var(--u)*20) calc(var(--u)*24);min-width:calc(var(--u)*300);align-items:stretch}
+.rv-score{font-family:'Lilita One';font-size:calc(var(--u)*18);letter-spacing:.06em;color:#c4cbff;text-align:center}
+.rv-score b{font-size:calc(var(--u)*30);color:#fff;margin-left:calc(var(--u)*8)}
+.rv-have{display:flex;align-items:center;justify-content:center;gap:calc(var(--u)*6);font-family:'Lilita One';font-size:calc(var(--u)*15);color:#c4cbff}
+.rv-no{background:none;border:0;padding:calc(var(--u)*12) calc(var(--u)*24);font-family:'Lilita One';font-size:calc(var(--u)*20);letter-spacing:.04em;color:#c9ceff;text-decoration:underline;cursor:pointer}
+.ad-box{text-align:center;min-width:calc(var(--u)*280);padding:calc(var(--u)*24)}
+.ad-tag{display:inline-block;font-family:'Lilita One';font-size:calc(var(--u)*16);background:#ffd23f;color:#2a1a05;border-radius:calc(var(--u)*8);padding:calc(var(--u)*2) calc(var(--u)*12)}
+.ad-count{font-family:'Lilita One';font-size:calc(var(--u)*90);color:#fff;line-height:1.1}
+.ad-sub{font-size:calc(var(--u)*14);color:#c4cbff;font-weight:600}
+#cd{text-shadow:0 0 calc(var(--u)*34) currentColor}
 #feverBar{display:none;width:calc(var(--u)*124);height:calc(var(--u)*11);border-radius:99px;background:rgba(0,0,0,.5);border:calc(var(--u)*2.5) solid #0e0c3a;overflow:hidden;z-index:11;pointer-events:none}
 #feverBar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#ff7a1a,#ffe14a)}
 #feverBanner{display:none;left:0;right:0;text-align:left;font-family:'Lilita One';font-size:calc(var(--u)*24);color:#ffb347;z-index:11;pointer-events:none;animation:hintPulse .7s ease-in-out infinite}
@@ -303,6 +314,21 @@ svg.ic{width:1em;height:1em;fill:currentColor;flex:none;display:block;filter:dro
   </section>
 
   <!-- GAME OVER -->
+  <section id="revive" class="screen overlay">
+    <div class="ribbon gold pop"><span>CONTINUE?</span></div>
+    <div class="card rv-card pop2">
+      <div class="rv-score">SCORE <b id="rvScore">0</b></div>
+      <button class="btn green btn-lg" id="btnReviveCoin">REVIVE <i class="ic coin"></i>100</button>
+      <button class="btn purple btn-lg" id="btnReviveAd"><svg class="ic"><use href="#i-play"/></svg>WATCH AD</button>
+      <div class="rv-have">You have <i class="ic coin"></i><span id="rvHave">0</span></div>
+    </div>
+    <button class="rv-no pop3" id="btnNoThanks">No, thanks</button>
+  </section>
+
+  <section id="adscreen" class="screen overlay">
+    <div class="card ad-box"><div class="ad-tag">AD</div><div class="ad-count" id="adCount">3</div><div class="ad-sub">Your rocket comes back after the ad</div></div>
+  </section>
+
   <section id="over" class="screen overlay">
     <div class="ribbon red pop"><span>GAME OVER</span></div>
     <div class="card result pop2">
@@ -317,7 +343,7 @@ svg.ic{width:1em;height:1em;fill:currentColor;flex:none;display:block;filter:dro
       <div id="unlockBox"></div>
     </div>
     <div class="stack pop3">
-      <button class="btn teal btn-lg" id="btnRestart"><svg class="ic"><use href="#i-restart"/></svg>RESTART</button>
+      <button class="btn teal btn-lg" id="btnRestart"><svg class="ic"><use href="#i-restart"/></svg>PLAY AGAIN</button>
       <button class="btn orange btn-lg" id="btnHome"><svg class="ic"><use href="#i-home"/></svg>HOME</button>
     </div>
   </section>
@@ -509,7 +535,10 @@ const Snd = (function(){
     over(){ if(!ac) return; [392,330,262,196].forEach((f,i)=>tone(f,.4,'triangle',.18,{delay:.1+i*.2})); },
     click(){ if(!ac) return; tone(700,.07,'square',.07); tone(1050,.07,'square',.05,{delay:.04}); },
     deny(){ if(!ac) return; tone(160,.18,'sawtooth',.1,{slide:.7}); },
-    cd(i,rs){ if(!ac) return; if(rs){ tone(i?700+(3-i)*130:1200,.07,'sine',.08); return; } if(i) tone(i===3?220:i===2?277:440,.22,'square',.1); else Snd.start(); },
+    cd(i,rs){ if(!ac) return;
+      if(rs){ const f=i?520+(3-i)*110:880; tone(f,.14,'triangle',.34); tone(f*2,.09,'sine',.14,{delay:.01}); if(!i) tone(1320,.2,'triangle',.3,{delay:.07}); return; }
+      if(i){ const f=i===3?196:i===2?262:392; tone(f,.3,'square',.3); tone(f*2,.22,'sawtooth',.13); tone(f*.5,.34,'sine',.45); noise(.09,.2,{ftype:'highpass',f0:3000,f1:6000}); }
+      else { Snd.start(); tone(523,.5,'square',.3); tone(784,.5,'square',.22); tone(1047,.65,'triangle',.3,{delay:.05}); noise(.75,.32,{ftype:'lowpass',f0:400,f1:3200}); } },
     fever(){ if(!ac) return; [0,4,7,12,16].forEach((n,i)=>tone(440*Math.pow(2,n/12),.18,'sawtooth',.1,{delay:i*.06})); noise(.5,.1,{ftype:'bandpass',f0:500,f1:4000}); },
     record(){ if(!ac) return; [0,4,7,12,16,19].forEach((n,i)=>tone(523*Math.pow(2,n/12),.25,'triangle',.14,{delay:i*.07})); },
     near(){ if(!ac) return; tone(520,.16,'sine',.16,{slide:2}); noise(.25,.1,{ftype:'bandpass',f0:800,f1:3000}); },
@@ -979,7 +1008,7 @@ function coinClear(x,y){
   return true;
 }
 function spawnStars(sx,hw,hasPup){
-  const pat=pick(['line','zig','arc','line']), n=randInt(4,6), dir=Math.random()<.5?-1:1;
+  const pat=pick(['line','zig','arc','line']), n=randInt(5,6), dir=Math.random()<.5?-1:1;
   let y=hasPup?-120:-60;
   for(let i=0;i<n;i++){
     let x=sx;
@@ -994,7 +1023,7 @@ function pickPup(){
 }
 function spawnWave(){
   if(G.stage==='boss') return;   /* boss fights its own attacks */
-  const eff=G.time+G.timeOffset, diff=G.diff;
+  const eff=G.time+G.timeOffset+G.dd*10, diff=G.press;   /* only NEW waves are tuned; live obstacles are never touched */
   const hw=lerp(90,48,diff), spread=lerp(60,105,diff);
   const gapMin=G.gapDist*.92;
   const maxShift=clamp(.5*420*(gapMin-spread-40)/Math.max(G.baseV,150),45,170);
@@ -1026,7 +1055,7 @@ function spawnWave(){
     const k=pickPup();
     if(k){ pups.push({k:k,x:sx,y:-70,ph:rand(0,PI2)}); hasPup=true; G.pupCd=rand(2700,4300); }
   }
-  if(Math.random()<.85||hasPup) spawnStars(sx,hw,hasPup);
+  if(Math.random()<.5||hasPup) spawnStars(sx,hw*(1+.35*Math.max(0,G.dd)),hasPup);   /* easy coin collecting -> a bit wider, harder lines */
 }
 
 /* =====================================================================
@@ -1040,7 +1069,16 @@ function hitCircle(cx,cy,cr){
   return false;
 }
 function nearGap(cx,cy,cr){ let m=1e9; const k=G.size||1; for(let i=0;i<3;i++){ m=Math.min(m,Math.hypot(R.x+RC[i][0]*k-cx,R.y+RC[i][1]*k-cy)-RC[i][2]*k-cr); } return m; }
+function registerHit(){ G.hitT.push(G.time); G.streak=0; G.hits=(G.hits||0)+1; }
+function startBias(){   /* small opening offset from the last 2-3 runs; fades out over the first 45 s */
+  const h=save.hist||[]; if(h.length<2||!save.avgT) return 0;
+  const n=h.length, t=h.reduce((a,x)=>a+x.t,0)/n, hit=h.reduce((a,x)=>a+x.h,0)/n;
+  if(t>=save.avgT*1.1&&hit<=1.5) return .3;
+  if(t<=save.avgT*.75||hit>=3||t<25) return -.3;
+  return 0;
+}
 function nearMiss(o){
+  G.nearT.push(G.time);
   const gp=Math.max(0,nearGap(o.x,o.y,o.r*o.hit)), pts=Math.round(50+(12-gp)*7), pf=gp<4;   /* closer = more points */
   G.nmCount=(G.nmCount||0)+1; addScore(pts); G.slow=pf?.7:.5; G.flash=Math.max(G.flash,pf?.5:.3); G.fe=Math.min(100,(G.fe||0)+(pf?22:14)); Snd.near();
   floatText(R.x,R.y-70,(pf?'PERFECT DODGE! +':'NICE DODGE! +')+pts,pf?'#ffe14a':'#7ff3ff',pf?28:24); ringFx(R.x,R.y,pf?'#ffe14a':'#7ff3ff',20,3,.4,4);
@@ -1110,14 +1148,14 @@ function handleHit(o,i){
   }
   if(G.invuln>0) return;
   if(G.shield){
-    G.shield=false; G.invuln=1.4; shieldBreakFx(); Snd.shieldBreak(); G.shake=Math.max(G.shake,10);
+    registerHit(); G.shield=false; G.invuln=1.4; shieldBreakFx(); Snd.shieldBreak(); G.shake=Math.max(G.shake,10);
     if(o.k!=='gate') explodeObstacle(o,i,true);
     return;
   }
   die();
 }
 function die(){
-  G.state='dying'; G.deadT=0; R.alive=false;
+  registerHit(); G.vSave=G.v; G.state='dying'; G.deadT=0; R.alive=false;
   const skin=skinById(save.selected);
   burst(R.x,R.y,40,['#ffffff','#ffd23f','#ff7a18','#ff3d00'],380,6,.9,{add:true,drag:2.6});
   burst(R.x,R.y,20,['#5a5a7a','#3b3b5c','#7a7a9a'],160,9,1.2,{drag:1.5,grow:1.2});
@@ -1135,6 +1173,7 @@ function updateObjects(dt){
   for(let i=obs.length-1;i>=0;i--){
     const o=obs[i];
     o.y+=v*o.sp*dt; o.rot+=o.rotSp*dt;
+    if(live&&!o.passed&&o.y>R.y+50){ o.passed=true; G.streak++; }   /* dodged */
     if(o.k==='mine') o.x=o.bx+Math.sin(G.clock*o.sf+o.ph)*o.amp;
     else if(o.k==='gate'){
       if(!o.warned&&o.y>-10){ o.warned=true; Snd.laserWarn(); }
@@ -1201,19 +1240,34 @@ function updateCountdown(dt){
   if(!c.resume){   /* Start: background drifts, rocket rises into place and revs; nothing spawns */
     G.size=skinById(save.selected).size||1;
     updateBg(dt,70); R.y+=(rocketPlayY()-R.y)*Math.min(1,3*dt); R.scale+=(G.size-R.scale)*Math.min(1,4*dt);
-    R.x+=(W/2-R.x)*Math.min(1,4*dt); R.tx=R.x; emitExhaust(dt,i===0?150:60); updateParts(dt);
+    R.x+=(W/2-R.x)*Math.min(1,4*dt); R.tx=R.x; emitExhaust(dt,i===0?150:60); updateParts(dt); G.shake=Math.max(0,G.shake-30*dt); G.flash=Math.max(0,G.flash-1.6*dt);
   }   /* Resume: everything stays frozen */
   if(i===c.last) return; c.last=i;
   const el=$('cd');
   if(i<0){ el.className='out'; G.cd=null; Snd.engineStart(); Snd.engineSet(G.boost>0); return; }
   el.className='out'; void el.offsetWidth; el.textContent=i||'GO!'; el.className='out on'+(i?'':' go');
   Snd.cd(i,c.resume);
+  el.style.color=i===3?'#ff8a8a':i===2?'#ffd86b':i===1?'#8ff0ff':'#7dff7d';
+  if(!c.resume){ ringFx(W/2,H*.4,el.style.color,26,7,.55,7); G.flash=Math.max(G.flash,i?.16:.5); if(!i){ G.shake=9; burst(R.x,R.y+30,26,['#ffffff','#ffd23f','#ff7a18'],300,5,.7,{add:true,drag:2}); } }
 }
 function updatePlaying(dt){
   if(G.slow>0){ G.slow-=dt; dt*=.5; }   /* near-miss slow-mo */
   const sk=skinById(save.selected); G.size=sk.size||1; G.spd=sk.spd||1;
   G.time+=dt;
   G.diff=1-Math.exp(-(G.time+G.timeOffset)/110);
+  /* --- dynamic difficulty --- */
+  G.ddT-=dt;
+  if(G.ddT<=0){ G.ddT=1;
+    G.hitT=G.hitT.filter(x=>G.time-x<25); G.nearT=G.nearT.filter(x=>G.time-x<15);
+    let tg=0;
+    if(G.hitT.length>=2) tg=-.7;                                   /* 2 hits close together -> ease off a little */
+    else if(G.nearT.length>=2) tg=0;                               /* close calls = about right: hold steady */
+    else if(G.streak>=12||G.combo>=10) tg=Math.min(1,.4+Math.max(0,G.streak-12)*.04);   /* long clean streak -> more pressure */
+    G.ddTg=tg;
+  }
+  G.dd+=((G.ddTg||0)-G.dd)*Math.min(1,dt*.15);                     /* slow drift, never a jump */
+  const rh=Math.sin(G.time/36*PI2-.8)*(.55+.45*Math.min(1,G.time/150));   /* calm / push / peak rhythm, peaks grow over time */
+  G.press=clamp(G.diff+.1*rh+.09*(G.dd+G.bias*Math.max(0,1-G.time/45)),0,1);
   G.baseV=190+175*G.diff;
   G.speedMul+=((G.boost>0?1.5:1)-G.speedMul)*Math.min(1,3*dt);
   G.v=G.baseV*G.speedMul;
@@ -1227,7 +1281,7 @@ function updatePlaying(dt){
   const sn=Math.floor(G.dist/5000); if(sn!==G.stageN){ G.stageN=sn; setStage(sn); }
   if(G.boss) updateBoss(dt);
   if(G.fe>=100&&!(G.fever>0)){ G.fever=8; G.feT=0; floatText(W/2,H*.36,'FEVER MODE!','#ff9a3c',36); G.flash=.6; Snd.fever(); Snd.musicLevel(.7,false); }
-  if(G.fever>0){ G.fever-=dt; G.fe=Math.max(0,G.fever/8*100); G.feT-=dt; if(G.feT<=0){ G.feT=.9; spawnStars(rand(MARGIN+70,W-MARGIN-70),50,false); } if(G.fever<=0){ G.fever=0; G.fe=0; Snd.musicLevel(.42,false); } }
+  if(G.fever>0){ G.fever-=dt; G.fe=Math.max(0,G.fever/8*100); G.feT-=dt; if(G.feT<=0){ G.feT=1.3; spawnStars(rand(MARGIN+70,W-MARGIN-70),50,false); } if(G.fever<=0){ G.fever=0; G.fe=0; Snd.musicLevel(.42,false); } }
   const bs=save.best;
   if(bs>0){
     if(!G.recW&&G.score>=bs*.85&&G.score<bs){ G.recW=true; floatText(W/2,H*.4,'ALMOST A NEW RECORD!','#ffe14a',26); Snd.laserWarn(); }
@@ -1260,8 +1314,40 @@ function updateDying(dt){
   G.v+=(30-G.v)*Math.min(1,2*dt);
   updateBg(dt,G.v); updateObjects(dt); updateParts(dt); updateFloats(dt);
   G.shake=Math.max(0,G.shake-30*dt); G.flash=Math.max(0,G.flash-1.6*dt);
-  if(G.deadT>1.15) finishRun();
+  if(G.deadT>1.15){ if(G.revived) finishRun(); else showRevive(); }
 }
+function updateRevive(dt){
+  G.v+=(30-G.v)*Math.min(1,2*dt);
+  updateBg(dt,G.v); updateObjects(dt); updateParts(dt); updateFloats(dt);
+  G.shake=Math.max(0,G.shake-30*dt); G.flash=Math.max(0,G.flash-1.6*dt);
+}
+const REVIVE_COST=100;
+function coinsAvail(){ return save.coins+G.stars; }   /* banked coins + coins picked up this run */
+function showRevive(){
+  G.state='revive';
+  $('rvScore').textContent=fmt(Math.floor(G.score)); $('rvHave').textContent=fmt(coinsAvail());
+  $('btnReviveCoin').classList.toggle('dis',coinsAvail()<REVIVE_COST);
+  showScreen('revive'); Snd.musicLevel(.25,false);
+}
+function doRevive(){
+  G.revived=true; showScreen(null);
+  for(let i=obs.length-1;i>=0;i--){ if(obs[i].y>-150) explodeObstacle(obs[i],i,true); }   /* clear the screen so you don't die again instantly */
+  R.alive=true; R.x=W/2; R.tx=W/2; R.y=rocketPlayY(); R.tilt=0; R.scale=G.size||1;
+  G.v=G.vSave||G.v; G.shield=true; G.invuln=2.5; G.boost=0; G.shake=0; G.flash=0;
+  burst(R.x,R.y,24,['#7ff3ff','#ffffff','#ffd23f'],260,5,.8,{add:true,drag:2}); ringFx(R.x,R.y,'#7ff3ff',20,5,.7,7);
+  G.state='playing'; G.cd={t:0,resume:true,last:4}; Snd.musicLevel(.42,false);
+}
+function reviveWithCoins(){
+  if(coinsAvail()<REVIVE_COST){ Snd.deny(); const b=$('btnReviveCoin'); b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake'); return; }
+  const t=Math.min(G.stars,REVIVE_COST); G.stars-=t; save.coins-=(REVIVE_COST-t); persist();
+  Snd.unlock(); doRevive();
+}
+function showAd(done){
+  if(typeof window.showRewardedAd==='function'){ window.showRewardedAd(done); return; }   /* plug a real rewarded-ad SDK in here */
+  showScreen('adscreen'); let n=3; $('adCount').textContent=n;
+  const iv=setInterval(()=>{ n--; if(n<=0){ clearInterval(iv); done(); } else { $('adCount').textContent=n; Snd.click(); } },1000);
+}
+function reviveWithAd(){ Snd.init(); Snd.click(); showAd(()=>{ doRevive(); }); }
 function updateIdle(dt){
   updateBg(dt,70);
   const ms=H<650?1.55:2.05;
@@ -1371,7 +1457,7 @@ function clearWorld(){ obs.length=0; stars.length=0; pups.length=0; parts.length
 function resetRun(){
   clearWorld();
   Object.assign(G,{time:0,diff:0,v:190,baseV:190,speedMul:1,score:0,dist:0,stars:0,combo:0,comboT:0,shield:false,magnet:0,boost:0,invuln:0,
-    waveDist:340-230,gapDist:340,lastSafe:W/2,lastType:'',pupCd:1500,boss:null,fe:0,fever:0,feT:0,recW:false,recH:false,cd:null,slow:0,stageN:0,stage:'normal',flip:false,nmCount:0,shake:0,flash:0,deadT:0,newBest:false,exAcc:0,shownScore:-1,shownStars:-1,shownCombo:-1});
+    waveDist:340-230,gapDist:340,lastSafe:W/2,lastType:'',pupCd:1500,dd:0,bias:startBias(),hits:0,ddTg:0,ddT:0,press:0,streak:0,hitT:[],nearT:[],revived:false,boss:null,fe:0,fever:0,feT:0,recW:false,recH:false,cd:null,slow:0,stageN:0,stage:'normal',flip:false,nmCount:0,shake:0,flash:0,deadT:0,newBest:false,exAcc:0,shownScore:-1,shownStars:-1,shownCombo:-1});
 }
 function startRun(fromRestart){
   { const d=new Date().toLocaleDateString('sv-SE'); if(!save.days.includes(d)){ save.days.push(d); persist(); } }
@@ -1415,6 +1501,8 @@ function finishRun(){
   G.newBest=sc>save.best;
   if(G.newBest) save.best=sc;
   save.totalStars+=G.stars; save.coins+=G.stars; save.runs=(save.runs||0)+1;
+  save.hist=(save.hist||[]).concat({t:Math.round(G.time),m:Math.floor(G.dist/10),h:G.hits||0}).slice(-3);   /* last 3 runs */
+  save.avgT=save.avgT?save.avgT*.85+G.time*.15:G.time;                                                       /* long-run average survival time */
   const unlocked=checkUnlocks(); persist();
   $('hud').classList.remove('show');
   countUp($('ovScore'),sc,900);
@@ -1625,6 +1713,9 @@ wire('btnResume',resume);
 wire('btnPRestart',()=>startRun(true));
 wire('btnPHome',goHome);
 wire('btnRestart',()=>startRun(true));
+wire('btnReviveCoin',reviveWithCoins);
+wire('btnReviveAd',reviveWithAd);
+wire('btnNoThanks',()=>finishRun());
 wire('btnHome',goHome);
 document.querySelectorAll('.tog-music').forEach(b=>b.addEventListener('click',()=>{ Snd.init(); save.music=!save.music; persist(); Snd.applyPrefs(); refreshToggles(); Snd.click(); }));
 document.querySelectorAll('.tog-sfx').forEach(b=>b.addEventListener('click',()=>{ Snd.init(); save.sfx=!save.sfx; persist(); Snd.applyPrefs(); refreshToggles(); if(save.sfx) Snd.click(); }));
@@ -1652,6 +1743,7 @@ function frame(now){
   switch(G.state){
     case 'playing': if(G.cd) updateCountdown(dt); else updatePlaying(dt); break;
     case 'dying': updateDying(dt); break;
+    case 'revive': updateRevive(dt); break;
     case 'paused': break;
     default: updateIdle(dt);
   }
