@@ -118,9 +118,12 @@ svg.ic{width:1em;height:1em;fill:currentColor;flex:none;display:block;filter:dro
 #toast{position:absolute;left:50%;bottom:calc(var(--u)*90);transform:translateX(-50%);z-index:30;background:rgba(40,30,140,.94);color:#fff;font-family:'Lilita One';font-size:max(12px,calc(var(--u)*15));padding:calc(var(--u)*8) calc(var(--u)*16);border-radius:calc(var(--u)*14);border:calc(var(--u)*2) solid rgba(230,240,255,.85);opacity:0;pointer-events:none;transition:opacity .2s;white-space:normal;max-width:calc(var(--u)*330);text-align:center}
 #toast.on{opacity:1}
 html,body{touch-action:none}
+.g-theme{text-align:center;padding:0 calc(var(--u)*12)}
 .screen.overlay{justify-content:safe center}
 #over .stack{gap:calc(var(--u)*6)}
 #over .btn-lg{font-size:calc(var(--u)*22);padding:calc(var(--u)*8) calc(var(--u)*26);min-width:calc(var(--u)*200)}
+#flipBanner{display:none;position:absolute;left:0;right:0;top:calc(var(--u)*164);text-align:center;font-family:'Lilita One';font-size:calc(var(--u)*26);letter-spacing:.06em;color:#e7b8ff;z-index:11;pointer-events:none;animation:hintPulse 1s ease-in-out infinite}
+#stage.flip #flipBanner{display:block}
 #fwarn{display:none;position:absolute;left:0;right:0;top:26%;text-align:center;z-index:12;pointer-events:none;font-family:'Lilita One';font-size:calc(var(--u)*44);color:#d58bff;--o:calc(var(--u)*4.5);animation:warnFlash .35s steps(2) infinite}
 #fwarn small{display:block;font-size:calc(var(--u)*22);color:#fff}
 #stage.fwarn #fwarn{display:block}
@@ -292,6 +295,7 @@ html,body{touch-action:none}
 
   <div id="toast"></div>
   <div id="cd" class="out"></div>
+  <div id="flipBanner" class="out">CONTROLS REVERSED</div>
   <div id="fwarn" class="out">WARNING!<small>CONTROLS REVERSED</small></div>
   <div id="warn" class="out">WARNING!<small>BOSS INCOMING</small></div>
 
@@ -328,6 +332,7 @@ html,body{touch-action:none}
       <div class="g-name" id="gName">Red Rocket</div>
       <div class="g-theme" id="gTheme"></div>
       <div class="g-req" id="gReq"></div>
+      <button class="btn purple" id="btnTry" style="display:none"><svg class="ic"><use href="#i-play"/></svg>TRY IT FOR 1 RUN</button>
     </div>
     <div class="row g-btns">
       <button class="btn red btn-lg" id="btnGBack">BACK</button>
@@ -478,6 +483,7 @@ function cgMidgame(cb){   /* natural break only: PLAY AGAIN; the SDK also enforc
   const go=()=>{ if(fin) return; fin=true; G.adOn=false; cgAdMute=false; cgApplyMute(); cb(); };
   try{ CG.ad.requestAd('midgame',{adStarted:()=>{ cgAdMute=true; cgApplyMute(); },adFinished:go,adError:go}); }catch(e){ go(); }
 }
+let trialId=null, trialAt=0; const runSkinId=()=>trialId||save.selected;   /* Titan X ad-trial: used for ONE run, never saved as the equipped rocket */
 cgInit();
 
 /* ---------- rocket skins (add more here) ---------- */
@@ -513,7 +519,7 @@ function reqMet(s){ const r=s.req; if(r.type==='free') return true; if(r.type===
 function isUnlocked(s){ return save.unlocked.includes(s.id); }
 function checkUnlocks(){ const n=[]; for(const s of SKINS){ if(!isUnlocked(s)&&reqMet(s)){ save.unlocked.push(s.id); n.push(s);} } return n; }
 checkUnlocks();
-if(!isUnlocked(skinById(save.selected))) save.selected='classic';
+if(!isUnlocked(skinById(runSkinId()))) save.selected='classic';
 persist();
 
 /* ---------- themes (scenes) ---------- */
@@ -878,7 +884,7 @@ function drawFloats(){
 }
 function emitExhaust(dt,rate){
   if(!R.alive) return;
-  const skin=skinById(save.selected);
+  const skin=skinById(runSkinId());
   G.exAcc+=dt*rate;
   const cols=flameColors(skin,G.clock);
   while(G.exAcc>=1){
@@ -1228,7 +1234,7 @@ function gateHit(o){
 function setCombo(n){ G.combo=n; if(n===0) G.comboT=0; }
 function addScore(n){ G.score+=n; const el=$('score'); if(el.animate) el.animate([{transform:'scale(1.22)'},{transform:'scale(1)'}],{duration:180,easing:'ease-out'}); }
 function collectStar(s){
-  s.got=true; G.stars++; if(skinById(save.selected).perk==='royal'&&Math.random()<.25) G.stars++; G.combo++; G.comboT=2.2;
+  s.got=true; G.stars++; if(skinById(runSkinId()).perk==='royal'&&Math.random()<.25) G.stars++; G.combo++; G.comboT=2.2;
   const mult=Math.min(1+Math.floor((G.combo-1)/5),5)*(G.boost>0?2:1)*(G.fever>0?2:1);
   G.fe=Math.min(100,(G.fe||0)+3);
   const pts=10*mult; addScore(pts);
@@ -1278,7 +1284,7 @@ function handleHit(o,i){
 }
 function die(){
   registerHit(); cgStop(); G.vSave=G.v; G.state='dying'; G.deadT=0; R.alive=false;
-  const skin=skinById(save.selected);
+  const skin=skinById(runSkinId());
   burst(R.x,R.y,40,['#ffffff','#ffd23f','#ff7a18','#ff3d00'],380,6,.9,{add:true,drag:2.6});
   burst(R.x,R.y,20,['#5a5a7a','#3b3b5c','#7a7a9a'],160,9,1.2,{drag:1.5,grow:1.2});
   const sc=[skin.body,skin.accent,skin.fin,skin.window];
@@ -1359,7 +1365,7 @@ function drawBoss(c){
 function makeBoss(){ const mx=60+30*(G.bossN||0); G.bul=[]; G.fireT=0; return {x:W/2,y:-90,t:0,hp:1,max:mx,cur:mx,shot:1.3,n:0,hitT:0}; }   /* each new boss has more HP */
 function rocketPower(sk){ return 1+(sk.spd-1)*3+(1-sk.size)*2; }   /* stronger rocket = harder-hitting bullets */
 function updateBullets(dt){
-  const b=G.boss, sk=skinById(save.selected), pw=rocketPower(sk), col=(sk.flame&&sk.flame[1])||'#7ff3ff';
+  const b=G.boss, sk=skinById(runSkinId()), pw=rocketPower(sk), col=(sk.flame&&sk.flame[1])||'#7ff3ff';
   if(b.y>H*.05&&R.alive){ G.fireT-=dt; if(G.fireT<=0){ G.fireT=.22; G.bul.push({x:R.x,y:R.y-34*(G.size||1),pw:pw,c:col}); Snd.shot(); } }
   b.hitT=Math.max(0,b.hitT-dt);
   for(let i=G.bul.length-1;i>=0;i--){
@@ -1375,13 +1381,13 @@ function updateCountdown(dt){
   const c=G.cd; c.t+=dt; drag=null;
   const i=c.t<.6?3:c.t<1.2?2:c.t<1.8?1:c.t<2.1?0:-1;
   if(!c.resume){   /* Start: background drifts, rocket rises into place and revs; nothing spawns */
-    G.size=skinById(save.selected).size||1;
+    G.size=skinById(runSkinId()).size||1;
     updateBg(dt,70); R.y+=(rocketPlayY()-R.y)*Math.min(1,3*dt); R.scale+=(G.size-R.scale)*Math.min(1,4*dt);
     R.x+=(W/2-R.x)*Math.min(1,4*dt); R.tx=R.x; emitExhaust(dt,i===0?150:60); updateParts(dt); G.shake=Math.max(0,G.shake-30*dt); G.flash=Math.max(0,G.flash-1.6*dt);
   }   /* Resume: everything stays frozen */
   if(i===c.last) return; c.last=i;
   const el=$('cd');
-  if(i<0){ if(!c.resume&&skinById(save.selected).perk) G.shield=true; el.className='out'; G.cd=null; cgStart(); Snd.engineStart(); Snd.engineSet(G.boost>0); return; }
+  if(i<0){ if(!c.resume&&skinById(runSkinId()).perk) G.shield=true; el.className='out'; G.cd=null; cgStart(); Snd.engineStart(); Snd.engineSet(G.boost>0); return; }
   el.className='out'; void el.offsetWidth; el.textContent=i||'GO!'; el.className='out on'+(i?'':' go');
   Snd.cd(i,c.resume);
   el.style.color=i===3?'#ff8a8a':i===2?'#ffd86b':i===1?'#8ff0ff':'#7dff7d';
@@ -1389,7 +1395,7 @@ function updateCountdown(dt){
 }
 function updatePlaying(dt){
   if(G.slow>0){ G.slow-=dt; dt*=.5; }   /* near-miss slow-mo */
-  const sk=skinById(save.selected); G.size=sk.size||1; G.spd=sk.spd||1;
+  const sk=skinById(runSkinId()); G.size=sk.size||1; G.spd=sk.spd||1;
   G.time+=dt;
   G.diff=1-Math.exp(-(G.time+G.timeOffset)/75);
   /* --- dynamic difficulty --- */
@@ -1478,7 +1484,7 @@ function doRevive(){
   G.revived=true; showScreen(null);
   for(let i=obs.length-1;i>=0;i--){ if(obs[i].y>-150) explodeObstacle(obs[i],i,true); }   /* clear the screen so you don't die again instantly */
   R.alive=true; R.x=W/2; R.tx=W/2; R.y=rocketPlayY(); R.tilt=0; R.scale=G.size||1;
-  G.v=G.vSave||G.v; G.shield=true; G.invuln=2.5; G.boost=0; G.shake=0; G.flash=0;
+  G.v=G.vSave||G.v; G.shield=false; G.invuln=2.5;   /* 2.5 s flashing invincibility after a revive (CrazyGames recommends 2-3 s with a flash) */ G.boost=0; G.shake=0; G.flash=0;
   burst(R.x,R.y,24,['#7ff3ff','#ffffff','#ffd23f'],260,5,.8,{add:true,drag:2}); ringFx(R.x,R.y,'#7ff3ff',20,5,.7,7);
   G.state='playing'; G.cd={t:0,resume:true,last:4}; Snd.musicLevel(.42,false);
 }
@@ -1574,7 +1580,7 @@ function render(){
   for(const p of pups) if(p.y>-60) drawPup(p);
   drawParts();
   if(R.alive&&!G.garage){
-    const skin=skinById(save.selected);
+    const skin=skinById(runSkinId());
     if(G.state==='playing'||G.state==='paused'){
       if(G.boost>0){ c.save(); c.globalCompositeOperation='lighter'; const g=c.createRadialGradient(R.x,R.y,10,R.x,R.y,70); g.addColorStop(0,'rgba(255,220,90,.55)'); g.addColorStop(1,'rgba(255,160,40,0)'); c.fillStyle=g; c.beginPath(); c.arc(R.x,R.y,70,0,PI2); c.fill(); c.restore(); }
       if(G.magnet>0) drawMagnetFx();
@@ -1632,7 +1638,7 @@ function startRun(fromRestart){
   Snd.musicLevel(.42,false); G.cd={t:0,resume:false,last:4};
 }
 function goHome(){
-  cgStop(); resetRun();
+  trialId=null; cgStop(); resetRun();
   G.state='menu'; G.garage=false;
   R.alive=true; R.x=W/2; R.tx=W/2; R.y=H*1.02; R.scale=1; R.tilt=0;
   $('hud').classList.remove('show'); hideHint();
@@ -1671,7 +1677,7 @@ function drawCelebrate(){
   for(const q of C.conf){ q.x+=q.vx*dt; q.y+=q.vy*dt; q.r+=q.vr*dt; if(q.y>C.gh+10){ q.y=-10; q.x=rand(0,C.gw); } c.save(); c.translate(q.x,q.y); c.rotate(q.r); c.fillStyle=q.c; c.fillRect(-q.s/2,-q.s/4,q.s,q.s/2); c.restore(); }
   const e=Math.min(1,C.t/1.3), ease=1-Math.pow(1-e,3), hover=e>=1?1:0;   /* rocket flies up from the bottom, then hovers */
   const ry=C.gh+90+(C.gh*.68-(C.gh+90))*ease+hover*Math.sin(C.t*3)*8, rx=C.gw/2+hover*Math.sin(C.t*1.6)*30;
-  drawRocket(c,skinById(save.selected),rx,ry,2.4,hover*Math.sin(C.t*1.6)*.12,C.t,1);
+  drawRocket(c,skinById(runSkinId()),rx,ry,2.4,hover*Math.sin(C.t*1.6)*.12,C.t,1);
   if(!C.b2&&C.t>1.5){ C.b2=true; Snd.record(); }
   if(C.t>=5){ const d=C.done; G.cel=null; d(); }
 }
@@ -1681,7 +1687,7 @@ function doubleCoins(){
   cgRewarded(()=>{ dblAt=Date.now(); G.adOn=false; save.coins+=G.stars; save.totalStars+=G.stars; persist(); $('ovStars').textContent='+'+G.stars*2; $('btnDblAd').style.display='none'; $('dblDone').classList.add('on'); showScreen('over'); Snd.unlock(); },()=>{ toast('No ad available right now'); if(!adsOK()) $('btnDblAd').style.display='none'; });
 }
 function finishRun(){
-  G.state='over';
+  trialId=null; G.state='over';
   const sc=Math.floor(G.score);
   G.newBest=sc>save.best;
   if(G.newBest) save.best=sc;
@@ -1747,6 +1753,7 @@ function gLockInfo(c,sk,x,y,sc,k){
 function gUpdateUI(){
   const s=SKINS[gIdx], un=isUnlocked(s);
   $('garageStars').textContent=fmt(save.coins);
+  $('btnTry').style.display=(s.id==='titan'&&!un&&adsOK()&&trialId!=='titan')?'':'none';
   $('gName').textContent=s.name; $('gTheme').textContent=s.theme+'  /  Size '+Math.round(s.size*100)+'%  /  Speed '+Math.round(s.spd*100)+'%'+(s.perk?'  /  '+PERKS[s.perk]:'');
   const rq=$('gReq'); rq.innerHTML=un?reqText(s):''; rq.classList.toggle('ok',un);
   const btn=$('btnGSelect');
@@ -1762,6 +1769,12 @@ function gGo(i,quiet){
   i=clamp(i,0,SKINS.length-1);
   if(i!==gIdx){ gIdx=i; if(!quiet) Snd.click(); }
   gUpdateUI();
+}
+function tryRocket(){
+  Snd.init();
+  const w=trialAt?Math.ceil((180000-(Date.now()-trialAt))/1000):0;
+  if(w>0){ Snd.deny(); toast('Ad available in '+fmtT(w)); return; }
+  cgRewarded(()=>{ trialAt=Date.now(); trialId='titan'; closeGarage(); toast('Titan X is ready for your next run - tap PLAY!'); },()=>{ toast('No ad available right now'); if(!adsOK()) $('btnTry').style.display='none'; });
 }
 function gAction(){
   Snd.init();
@@ -1909,6 +1922,7 @@ wire('btnReviveAd',reviveWithAd);
 wire('btnNoThanks',()=>finishRun());
 wire('btnDblAd',doubleCoins);
 wire('btnShop',openGarage);
+wire('btnTry',tryRocket);
 wire('btnHome',goHome);
 document.querySelectorAll('.tog-music').forEach(b=>b.addEventListener('click',()=>{ Snd.init(); save.music=!save.music; persist(); Snd.applyPrefs(); refreshToggles(); Snd.click(); }));
 document.querySelectorAll('.tog-sfx').forEach(b=>b.addEventListener('click',()=>{ Snd.init(); save.sfx=!save.sfx; persist(); Snd.applyPrefs(); refreshToggles(); if(save.sfx) Snd.click(); }));
