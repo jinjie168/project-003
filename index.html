@@ -478,7 +478,7 @@ function cgRewarded(done,fail){   /* done() = give the reward; fail(code) = NO r
   }); }catch(e){ end(); fail('other'); }
 }
 function cgMidgame(cb){   /* natural break only: PLAY AGAIN; the SDK also enforces its own pacing */
-  if(!cgOK||Date.now()-bootT<180000||Date.now()-lastRewardAt<60000){ cb(); return; }
+  if(!cgOK||Date.now()-bootT<45000||Date.now()-lastRewardAt<60000){ cb(); return; }
   G.adOn=true; cgStop(); let fin=false;
   const go=()=>{ if(fin) return; fin=true; G.adOn=false; cgAdMute=false; cgApplyMute(); cb(); };
   try{ CG.ad.requestAd('midgame',{adStarted:()=>{ cgAdMute=true; cgApplyMute(); },adFinished:go,adError:go}); }catch(e){ go(); }
@@ -1928,8 +1928,10 @@ document.querySelectorAll('.tog-music').forEach(b=>b.addEventListener('click',()
 document.querySelectorAll('.tog-sfx').forEach(b=>b.addEventListener('click',()=>{ Snd.init(); save.sfx=!save.sfx; persist(); Snd.applyPrefs(); refreshToggles(); if(save.sfx) Snd.click(); }));
 
 /* ---------- resize & main loop ---------- */
+let sized=false;
 function resize(){
-  const vw=window.innerWidth, vh=window.innerHeight;
+  const vw=window.innerWidth||document.documentElement.clientWidth, vh=window.innerHeight||document.documentElement.clientHeight;
+  if(!(vw>40&&vh>40)){ sized=false; return false; }   /* the page is not laid out yet (e.g. CrazyGames loads the iframe hidden) */
   const w=Math.floor(Math.min(vw,vh*.72));
   stage.style.width=w+'px'; stage.style.height=vh+'px';
   S=w/W; H=vh/S; dpr=Math.min(window.devicePixelRatio||1,2);
@@ -1937,25 +1939,30 @@ function resize(){
   stage.style.setProperty('--u',S+'px');
   buildBackground(); initBg(); sizeGarage(); fitActive();
   if(G.state==='menu'||G.state==='over') R.y=Math.min(R.y,H*1.02);
+  sized=true; return true;
 }
 window.addEventListener('resize',resize);
+if(window.ResizeObserver) new ResizeObserver(()=>resize()).observe(document.documentElement);
 window.addEventListener('orientationchange',()=>setTimeout(resize,150));
 
 let last=performance.now();
 function frame(now){
   requestAnimationFrame(frame);
-  let dt=(now-last)/1000; last=now;
-  if(!(dt>0)) dt=1/60; dt=Math.min(dt,1/30);
-  G.clock+=dt;
-  switch(G.state){
-    case 'playing': if(G.cd) updateCountdown(dt); else updatePlaying(dt); break;
-    case 'dying': updateDying(dt); break;
-    case 'revive': updateRevive(dt); break;
-    case 'celebrate': updateBg(dt,60); updateParts(dt); break;
-    case 'paused': break;
-    default: updateIdle(dt);
-  }
-  render();
+  try{   /* one bad frame must never kill the loop */
+    if(!sized&&!resize()){ last=now; return; }
+    let dt=(now-last)/1000; last=now;
+    if(!(dt>0)) dt=1/60; dt=Math.min(dt,1/30);
+    G.clock+=dt;
+    switch(G.state){
+      case 'playing': if(G.cd) updateCountdown(dt); else updatePlaying(dt); break;
+      case 'dying': updateDying(dt); break;
+      case 'revive': updateRevive(dt); break;
+      case 'celebrate': updateBg(dt,60); updateParts(dt); break;
+      case 'paused': break;
+      default: updateIdle(dt);
+    }
+    render();
+  }catch(e){ if(!frame._e){ frame._e=1; console.error(e); } }
 }
 
 resize();
