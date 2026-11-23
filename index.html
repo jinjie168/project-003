@@ -122,9 +122,10 @@ html,body{touch-action:none}
 .screen.overlay{justify-content:safe center}
 #over .stack{gap:calc(var(--u)*6)}
 #over .btn-lg{font-size:calc(var(--u)*22);padding:calc(var(--u)*8) calc(var(--u)*26);min-width:calc(var(--u)*200)}
-#flipBanner{display:none;position:absolute;left:0;right:0;top:calc(var(--u)*164);text-align:center;font-family:'Lilita One';font-size:calc(var(--u)*26);letter-spacing:.06em;color:#e7b8ff;z-index:11;pointer-events:none;animation:hintPulse 1s ease-in-out infinite}
+#flipBanner{display:none;position:absolute;left:calc(var(--u)*24);right:calc(var(--u)*24);top:calc(var(--u)*164);text-align:center;font-family:'Lilita One';font-size:calc(var(--u)*26);letter-spacing:.06em;color:#e7b8ff;z-index:11;pointer-events:none;animation:hintPulse 1s ease-in-out infinite}
 #stage.flip #flipBanner{display:block}
-#fwarn{display:none;position:absolute;left:0;right:0;top:26%;text-align:center;z-index:12;pointer-events:none;font-family:'Lilita One';font-size:calc(var(--u)*44);color:#d58bff;--o:calc(var(--u)*4.5);animation:warnFlash .35s steps(2) infinite}
+#stage.fwarn #flipBanner{display:none}   /* the 3 s WARNING replaces it, so they never overlap */
+#fwarn{display:none;position:absolute;left:0;right:0;top:calc(var(--u)*205);text-align:center;z-index:12;pointer-events:none;font-family:'Lilita One';font-size:calc(var(--u)*44);color:#d58bff;--o:calc(var(--u)*4.5);animation:warnFlash .35s steps(2) infinite}
 #fwarn small{display:block;font-size:calc(var(--u)*22);color:#fff}
 #stage.fwarn #fwarn{display:block}
 #stage.fwarn::before{content:'';position:absolute;inset:0;pointer-events:none;z-index:9;box-shadow:inset 0 0 calc(var(--u)*80) rgba(190,90,255,.85);animation:warnFlash .35s steps(2) infinite}
@@ -297,7 +298,7 @@ html,body{touch-action:none}
   <div id="cd" class="out"></div>
   <div id="flipBanner" class="out">CONTROLS REVERSED</div>
   <div id="fwarn" class="out">WARNING!<small>CONTROLS REVERSED</small></div>
-  <div id="warn" class="out">WARNING!<small>BOSS INCOMING</small></div>
+  <div id="warn" class="out">WARNING!<small>ALIEN INCOMING</small></div>
 
   <div id="hint"><div class="h1 out"><svg class="ic"><use href="#i-back"/></svg><span>SWIPE TO STEER</span><svg class="ic fl"><use href="#i-back"/></svg></div><small>or use  &larr; &rarr;  /  A D</small></div>
 
@@ -1347,7 +1348,7 @@ function updateBoss(dt){
   if(b.cur<=0){   /* defeated by bullets */
     burst(b.x,b.y,40,['#ffd23f','#ff8a3c','#ffffff'],260,5,.8,{add:true,shape:'spark'}); ringFx(b.x,b.y,'#ffd23f',30,4,.7,6);
     G.boss=null; G.bossN=(G.bossN||0)+1; G.stage='normal'; addScore(500); G.stars+=30; G.fe=Math.min(100,(G.fe||0)+30); G.flash=.8; G.shake=14; Snd.record();
-    floatText(W/2,H*.3,'BOSS DEFEATED!','#ffd23f',34); floatText(W/2,H*.3+38,'+500  +30 COINS','#ffffff',24);
+    floatText(W/2,H*.3,'ALIEN DEFEATED!','#ffd23f',34); floatText(W/2,H*.3+38,'+500  +30 COINS','#ffffff',24);
   }
 }
 function drawBoss(c){
@@ -1378,6 +1379,7 @@ function drawBullets(c){
   for(const u of (G.bul||[])){ const w=3+u.pw*1.6, h=12+u.pw*3; c.save(); c.globalCompositeOperation='lighter'; c.fillStyle=u.c; c.beginPath(); c.ellipse(u.x,u.y,w*1.6,h*1.3,0,0,PI2); c.globalAlpha=.35; c.fill(); c.globalAlpha=1; c.beginPath(); c.ellipse(u.x,u.y,w,h,0,0,PI2); c.fill(); c.fillStyle='#fff'; c.beginPath(); c.ellipse(u.x,u.y,w*.45,h*.7,0,0,PI2); c.fill(); c.restore(); }
 }
 function updateCountdown(dt){
+  stage.classList.toggle('flip',!!G.flip); stage.classList.toggle('fever',G.fever>0); stage.classList.toggle('warn',G.bossWarn>0); stage.classList.toggle('fwarn',G.flipWarn>0); stage.classList.add('inrun');   /* the 3-2-1 keeps the look of the paused scene */
   const c=G.cd; c.t+=dt; drag=null;
   const i=c.t<.6?3:c.t<1.2?2:c.t<1.8?1:c.t<2.1?0:-1;
   if(!c.resume){   /* Start: background drifts, rocket rises into place and revs; nothing spawns */
@@ -1609,7 +1611,7 @@ function fitActive(){   /* shrink a screen's content if it is taller than the st
   const el=document.querySelector('.screen.show'); if(!el||el.id==='celebrate'||el.id==='garage') return;
   const ch=el.clientHeight, sh=el.scrollHeight; if(sh>ch+1) el.style.zoom=Math.max(.5,ch/sh*.97);
 }
-function showScreen(id){ stage.classList.remove('flip','fever','inrun','warn','fwarn'); document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('show',s.id===id)); requestAnimationFrame(fitActive); }
+function showScreen(id){ stage.classList.remove('inrun','warn','fwarn'); if(id!=='pause') stage.classList.remove('flip','fever'); document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('show',s.id===id)); requestAnimationFrame(fitActive); }
 function refreshToggles(){
   document.querySelectorAll('.tog-music').forEach(b=>b.classList.toggle('off',!save.music));
   document.querySelectorAll('.tog-sfx').forEach(b=>b.classList.toggle('off',!save.sfx));
