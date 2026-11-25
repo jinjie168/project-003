@@ -711,8 +711,12 @@ function buildBackground(){
   bgGrad.addColorStop(0,theme.top); bgGrad.addColorStop(.55,theme.mid); bgGrad.addColorStop(1,theme.bot);
   vigGrad=ctx.createRadialGradient(W/2,H*.5,H*.38,W/2,H*.5,H*.82);
   vigGrad.addColorStop(0,'rgba(0,0,0,0)'); vigGrad.addColorStop(1,'rgba(3,2,20,.5)');
-  nebCanvas=document.createElement('canvas'); nebCanvas.width=canvas.width; nebCanvas.height=canvas.height;
-  const k=nebCanvas.width/W, x=nebCanvas.getContext('2d'); x.scale(k,k);
+  if(!nebCanvas) nebCanvas=document.createElement('canvas');   /* ONE canvas, reused: making a new full-size canvas on every rotation exhausts iPad Safari's canvas memory */
+  nebCanvas.width=0; nebCanvas.height=0;   /* release the old backing store first */
+  nebCanvas.width=canvas.width; nebCanvas.height=canvas.height;
+  const k=nebCanvas.width/W, x=nebCanvas.getContext('2d');
+  if(!x){ nebCanvas.width=1; nebCanvas.height=1; return; }   /* still out of memory: skip the nebula instead of crashing */
+  x.scale(k,k);
   for(let i=0;i<8;i++){
     const col=theme.neb[i%theme.neb.length], bx=rand(0,W), by=rand(0,H), r=rand(110,230);
     for(const dy of [-H,0,H]){
@@ -1738,6 +1742,7 @@ const gCv=$('gCv'), gCtx=gCv.getContext('2d');
 const LOCK_PATH=new Path2D('M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h1zm2 0h6V7a3 3 0 0 0-6 0v3z');
 let gIdx=0, gPos=0, gDrag=null, gLast=0, gw=400, gh=480;
 function sizeGarage(){
+  if(!G.garage){ if(gCv.width>1){ gCv.width=1; gCv.height=1; } return; }   /* no big canvas while the shop is closed (saves iPad memory) */
   const w=gCv.clientWidth, h=gCv.clientHeight; if(!w||!h) return;
   gCv.width=Math.round(w*dpr); gCv.height=Math.round(h*dpr); gw=w/S; gh=h/S;
 }
