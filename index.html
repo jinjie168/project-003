@@ -194,7 +194,7 @@ html,body{touch-action:none}
 #hint .keys i{font-family:'Fredoka';font-style:normal;font-weight:700;font-size:max(11px,calc(var(--u)*13));color:#c9d1ff}
 #hint .kp b{display:inline-block;min-width:calc(var(--u)*28);height:calc(var(--u)*28);line-height:calc(var(--u)*28);margin:0 calc(var(--u)*2);background:#fff;color:#2a2570;border-radius:calc(var(--u)*7);box-shadow:0 calc(var(--u)*3) 0 #9aa3e8;font-size:calc(var(--u)*16);text-align:center}
 #hint .mouse{width:calc(var(--u)*36);height:calc(var(--u)*45)}
-#dbg{display:none;position:absolute;left:4px;bottom:4px;z-index:99;font:11px monospace;color:#ff9a9a;background:rgba(0,0,0,.65);padding:2px 6px;max-width:96%;pointer-events:none}
+#dbg{display:none;position:absolute;left:4px;bottom:4px;z-index:99;font:12px/1.25 monospace;word-break:break-all;color:#ff9a9a;background:rgba(0,0,0,.65);padding:2px 6px;max-width:96%;pointer-events:none}
 #hint .ic{font-size:calc(var(--u)*26);color:#7ff3ff}
 #hint .ic.fl{transform:scaleX(-1)}
 #hint small{display:block;margin-top:calc(var(--u)*6);font-size:max(11px,calc(var(--u)*13));color:#c9d1ff;font-family:'Fredoka';font-weight:600}
@@ -1949,7 +1949,7 @@ document.querySelectorAll('.tog-sfx').forEach(b=>b.addEventListener('click',()=>
 
 /* ---------- resize & main loop ---------- */
 let sized=false, rzT=0, vcT=0;
-function showErr(e){ try{ console.error(e); const d=document.getElementById('dbg'); d.textContent=String((e&&e.message)||e).slice(0,160); d.style.display='block'; }catch(_){} }   /* tiny on-screen error note: only appears if something breaks */
+function showErr(e){ try{ console.error(e); const d=document.getElementById('dbg'); const st=String((e&&e.stack)||'').split('\n').slice(0,3).join(' | '); d.textContent=String((e&&e.message)||e).slice(0,140)+'  ['+st.slice(0,220)+']'; d.style.display='block'; }catch(_){} }   /* tiny on-screen error note: only appears if something breaks */
 function resize(){ try{ return resizeNow(); }catch(e){ sized=false; showErr(e); return false; } }
 function scheduleResize(){ cancelAnimationFrame(rzT); rzT=requestAnimationFrame(()=>{ if(resize()) verifyCanvas(); }); }
 function verifyCanvas(){   /* if the game canvas is still blank a moment after a resize, rebuild once more */
