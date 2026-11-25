@@ -349,7 +349,6 @@ html,body{touch-action:none}
       <div class="g-name" id="gName">Red Rocket</div>
       <div class="g-theme" id="gTheme"></div>
       <div class="g-req" id="gReq"></div>
-      <button class="btn purple" id="btnTry" style="display:none"><svg class="ic"><use href="#i-play"/></svg>TRY IT FOR 1 RUN</button>
     </div>
     <div class="row g-btns">
       <button class="btn red btn-lg" id="btnGBack">BACK</button>
@@ -500,7 +499,7 @@ function cgMidgame(cb){   /* natural break only: PLAY AGAIN; the SDK also enforc
   const go=()=>{ if(fin) return; fin=true; G.adOn=false; cgAdMute=false; cgApplyMute(); cb(); };
   try{ CG.ad.requestAd('midgame',{adStarted:()=>{ cgAdMute=true; cgApplyMute(); },adFinished:go,adError:go}); }catch(e){ go(); }
 }
-let trialId=null, trialAt=0; const runSkinId=()=>trialId||save.selected;   /* Titan X ad-trial: used for ONE run, never saved as the equipped rocket */
+let trialId=null, trialAt=0, trialLive=false; const runSkinId=()=>trialId||save.selected;   /* Titan X ad-trial: used for ONE run, never saved as the equipped rocket */
 cgInit();
 
 /* ---------- rocket skins (add more here) ---------- */
@@ -1648,6 +1647,7 @@ function resetRun(){
     waveDist:340-230,gapDist:340,lastSafe:W/2,lastType:'',pupCd:1500,dd:0,bias:startBias(),hits:0,ddTg:0,ddT:0,press:0,streak:0,hitT:[],nearT:[],revived:false,boss:null,fe:0,fever:0,feT:0,recW:false,recH:false,cd:null,slow:0,stageN:0,stageKey:'start',bossWarn:0,bossN:0,bul:[],fireT:0,flipWarn:0,stage:'normal',flip:false,nmCount:0,shake:0,flash:0,deadT:0,newBest:false,exAcc:0,shownScore:-1,shownStars:-1,shownCombo:-1});
 }
 function startRun(fromRestart){
+  trialLive=!!trialId;   /* the armed Titan X trial is used by THIS run */
   { const d=new Date().toLocaleDateString('sv-SE'); if(!save.days.includes(d)){ save.days.push(d); persist(); } }
   Snd.init();
   resetRun();
@@ -1662,7 +1662,8 @@ function startRun(fromRestart){
   Snd.musicLevel(.42,false); G.cd={t:0,resume:false,last:4};
 }
 function goHome(){
-  trialId=null; cgStop(); resetRun();
+  if(trialLive){ trialId=null; trialLive=false; }   /* an armed trial that has not started yet survives going to the menu */
+  cgStop(); resetRun();
   G.state='menu'; G.garage=false;
   R.alive=true; R.x=W/2; R.tx=W/2; R.y=H*1.02; R.scale=1; R.tilt=0;
   $('hud').classList.remove('show'); hideHint();
@@ -1711,7 +1712,8 @@ function doubleCoins(){
   cgRewarded(()=>{ dblAt=Date.now(); G.adOn=false; save.coins+=G.stars; save.totalStars+=G.stars; persist(); $('ovStars').textContent='+'+G.stars*2; $('btnDblAd').style.display='none'; $('dblDone').classList.add('on'); showScreen('over'); Snd.unlock(); },()=>{ toast('No ad available right now'); if(!adsOK()) $('btnDblAd').style.display='none'; });
 }
 function finishRun(){
-  trialId=null; G.state='over';
+  if(trialLive){ trialId=null; trialLive=false; }   /* the trial run is over */
+  G.state='over';
   const sc=Math.floor(G.score);
   G.newBest=sc>save.best;
   if(G.newBest) save.best=sc;
@@ -1746,6 +1748,7 @@ function sizeGarage(){
   const w=gCv.clientWidth, h=gCv.clientHeight; if(!w||!h) return;
   gCv.width=Math.round(w*dpr); gCv.height=Math.round(h*dpr); gw=w/S; gh=h/S;
 }
+if(window.ResizeObserver) new ResizeObserver(()=>{ if(G.garage) sizeGarage(); }).observe(gCv);   /* keep the drawing buffer matched to the box, or the rockets look stretched */
 function lockedSkin(s){ return Object.assign({},s,{body:'#6a72ae',accent:'#454b86',fin:'#454b86',window:'#343868',flame:['#343873','#343873','#343873'],rainbow:false}); }
 function reqText(s){
   const r=s.req;
@@ -1778,7 +1781,6 @@ function gLockInfo(c,sk,x,y,sc,k){
 function gUpdateUI(){
   const s=SKINS[gIdx], un=isUnlocked(s);
   $('garageStars').textContent=fmt(save.coins);
-  $('btnTry').style.display=(s.id==='titan'&&!un&&adsOK()&&trialId!=='titan')?'':'none';
   $('gName').textContent=s.name; $('gTheme').textContent=s.theme+'  /  Size '+Math.round(s.size*100)+'%  /  Speed '+Math.round(s.spd*100)+'%'+(s.perk?'  /  '+PERKS[s.perk]:'');
   const rq=$('gReq'); rq.innerHTML=un?reqText(s):''; rq.classList.toggle('ok',un);
   const btn=$('btnGSelect');
@@ -1788,6 +1790,8 @@ function gUpdateUI(){
     btn.className='btn btn-lg '+(can?'orange':'dis');
     btn.innerHTML='BUY <i class="ic coin"></i>'+fmt(s.req.n);
   } else { btn.className='btn btn-lg dis'; btn.innerHTML='<svg class="ic"><use href="#i-lock"/></svg>LOCKED'; }
+  btn.dataset.mode='';
+  if(s.id==='titan'&&!un&&save.coins<s.req.n&&adsOK()&&trialId!=='titan'){ btn.dataset.mode='try'; btn.className='btn purple btn-lg'; btn.innerHTML='<svg class="ic"><use href="#i-play"/></svg>TRY 1 RUN'; }   /* not enough coins: ad-trial takes the BUY button's place; enough coins: BUY comes back */
   $('gPrev').classList.toggle('off',gIdx===0); $('gNext').classList.toggle('off',gIdx===SKINS.length-1);
 }
 function gGo(i,quiet){
@@ -1799,10 +1803,11 @@ function tryRocket(){
   Snd.init();
   const w=trialAt?Math.ceil((180000-(Date.now()-trialAt))/1000):0;
   if(w>0){ Snd.deny(); toast('Ad available in '+fmtT(w)); return; }
-  cgRewarded(()=>{ trialAt=Date.now(); trialId='titan'; closeGarage(); toast('Titan X is ready for your next run - tap PLAY!'); },()=>{ toast('No ad available right now'); if(!adsOK()) $('btnTry').style.display='none'; });
+  cgRewarded(()=>{ trialAt=Date.now(); trialId='titan'; closeGarage(); toast('Titan X is ready for your next run!'); },()=>{ toast('No ad available right now'); gUpdateUI(); });
 }
 function gAction(){
   Snd.init();
+  if($('btnGSelect').dataset.mode==='try'){ tryRocket(); return; }
   const s=SKINS[gIdx], btn=$('btnGSelect');
   if(isUnlocked(s)){ save.selected=s.id; persist(); Snd.click(); closeGarage(); return; }
   if(s.req.type==='coins' && save.coins>=s.req.n){
@@ -1947,7 +1952,6 @@ wire('btnReviveAd',reviveWithAd);
 wire('btnNoThanks',()=>finishRun());
 wire('btnDblAd',doubleCoins);
 wire('btnShop',openGarage);
-wire('btnTry',tryRocket);
 wire('btnHome',goHome);
 document.querySelectorAll('.tog-music').forEach(b=>b.addEventListener('click',()=>{ Snd.init(); save.music=!save.music; persist(); Snd.applyPrefs(); refreshToggles(); Snd.click(); }));
 document.querySelectorAll('.tog-sfx').forEach(b=>b.addEventListener('click',()=>{ Snd.init(); save.sfx=!save.sfx; persist(); Snd.applyPrefs(); refreshToggles(); if(save.sfx) Snd.click(); }));
